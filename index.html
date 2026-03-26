@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLIGHTLOG — Planespotting Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c12;
+    --surface: #0d1320;
+    --surface2: #111927;
+    --border: #1e2d42;
+    --accent: #00c8ff;
+    --accent2: #ff6b35;
+    --accent3: #7dff6b;
+    --text: #c8d8e8;
+    --text-dim: #5a7a9a;
+    --text-bright: #eef4fa;
+    --radar: #00c8ff22;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Atmospheric background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, #00c8ff0d 0%, transparent 60%),
+      radial-gradient(ellipse 40% 30% at 85% 20%, #ff6b3508 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Grid overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.25;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,12,18,0.95);
+    backdrop-filter: blur(20px);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .logo-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+    color: var(--text-bright);
+    line-height: 1;
+  }
+
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  .stat-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .add-btn {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 0.5rem 1.2rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+
+  .add-btn:hover {
+    background: var(--text-bright);
+    transform: translateY(-1px);
+  }
+
+  /* MAIN LAYOUT */
+  .app-layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem;
+    background: rgba(13,19,32,0.8);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .sidebar-section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sidebar-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Search */
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-bright);
+    padding: 0.6rem 0.75rem 0.6rem 2.25rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus {
+    border-color: var(--accent);
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    pointer-events: none;
+  }
+
+  /* Filter groups */
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .filter-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+  }
+
+  .filter-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235a7a9a' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    transition: border-color 0.2s;
+  }
+
+  .filter-select:focus { border-color: var(--accent); }
+
+  /* View Toggle */
+  .view-toggle {
+    display: flex;
+    gap: 0;
+  }
+
+  .view-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 0.45rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .view-btn:first-child { border-right: none; }
+  .view-btn.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* Sort */
+  .sort-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  /* Tag filters */
+  .tag-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .tag-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.08em;
+    background: transparent;
+  }
+
+  .tag-chip:hover, .tag-chip.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--radar);
+  }
+
+  /* MAIN CONTENT */
+  .main-content {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .results-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .results-count span {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* GRID VIEW */
+  .sightings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1px;
+    background: var(--border);
+  }
+
+  /* LIST VIEW */
+  .sightings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  /* CARD */
+  .sighting-card {
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .sighting-card:hover {
+    background: var(--surface2);
+    z-index: 2;
+  }
+
+  .sighting-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .sighting-card:hover::before { opacity: 1; }
+
+  .card-photo {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    display: block;
+    background: var(--surface2);
+    position: relative;
+  }
+
+  .card-photo-placeholder {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 2rem;
+  }
+
+  .card-photo-link {
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-photo-link img {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+  }
+
+  .sighting-card:hover .card-photo-link img { transform: scale(1.04); }
+
+  .photo-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(8,12,18,0.8) 0%, transparent 50%);
+    display: flex;
+    align-items: flex-end;
+    padding: 0.75rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .sighting-card:hover .photo-overlay { opacity: 1; }
+
+  .flickr-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: #ff0084;
+    background: rgba(0,0,0,0.7);
+    padding: 0.2rem 0.5rem;
+    letter-spacing: 0.1em;
+    border: 1px solid #ff008440;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .card-reg {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    color: var(--text-bright);
+    letter-spacing: 0.06em;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .card-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .meta-key {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .meta-val {
+    font-size: 0.8rem;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .card-footer {
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .card-tags {
+    display: flex;
+    gap: 0.3rem;
+  }
+
+  .mini-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    padding: 0.15rem 0.4rem;
+    background: var(--radar);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+
+  /* LIST CARD */
+  .list-card {
+    background: var(--surface);
+    padding: 1rem 1.25rem;
+    display: grid;
+    grid-template-columns: 120px 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.15s;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .list-card:hover { background: var(--surface2); }
+
+  .list-card-thumb {
+    width: 120px;
+    height: 68px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .list-card-thumb-placeholder {
+    width: 120px;
+    height: 68px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+  }
+
+  .list-main {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  .list-reg {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--text-bright);
+    letter-spacing: 0.06em;
+    min-width: 90px;
+  }
+
+  .list-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .list-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+
+  .list-airline {
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+
+  .list-meta {
+    display: flex;
+    gap: 1.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+  }
+
+  .list-meta span { color: var(--text); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(4,8,14,0.92);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    width: min(700px, 95vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    transform: translateY(20px) scale(0.98);
+    transition: transform 0.25s;
+  }
+
+  .modal-overlay.open .modal {
+    transform: translateY(0) scale(1);
+  }
+
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.08em;
+    color: var(--text-bright);
+  }
+
+  .modal-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .modal-close:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  /* Form */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  .form-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .form-label span {
+    color: var(--accent2);
+  }
+
+  .form-input, .form-select, .form-textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-bright);
+    padding: 0.6rem 0.75rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+  }
+
+  .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235a7a9a' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    cursor: pointer;
+  }
+
+  .form-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn-cancel {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 0.5rem 1.2rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
+
+  .btn-submit {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 0.5rem 1.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+
+  .btn-submit:hover { background: var(--text-bright); transform: translateY(-1px); }
+
+  /* Detail modal */
+  .detail-photo {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    display: block;
+  }
+
+  .detail-photo-placeholder {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: var(--surface2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--text-dim);
+    font-size: 2.5rem;
+  }
+
+  .detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .detail-reg {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: var(--text-bright);
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+
+  .detail-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    margin-top: 0.25rem;
+  }
+
+  .detail-date-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.8rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .detail-cell {
+    background: var(--surface2);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .detail-cell-key {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .detail-cell-val {
+    font-size: 0.88rem;
+    color: var(--text-bright);
+    font-weight: 500;
+  }
+
+  .detail-notes {
+    background: var(--surface2);
+    padding: 1rem;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  .detail-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .btn-flickr {
+    background: #ff0084;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: opacity 0.15s;
+  }
+
+  .btn-flickr:hover { opacity: 0.85; }
+
+  .btn-delete {
+    background: none;
+    border: 1px solid #ff3b30;
+    color: #ff3b30;
+    padding: 0.5rem 1rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-delete:hover { background: #ff3b3020; }
+
+  /* Empty state */
+  .empty-state {
+    grid-column: 1 / -1;
+    padding: 4rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .empty-icon { font-size: 3rem; opacity: 0.3; }
+
+  .empty-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .empty-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    opacity: 0.6;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    padding: 0.75rem 1.25rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    z-index: 200;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* Flickr preview */
+  .flickr-preview {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    margin-top: 0.5rem;
+  }
+
+  .flickr-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+  }
+
+  /* Condition badge */
+  .condition-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+  }
+
+  .dot-excellent { background: var(--accent3); }
+  .dot-good { background: var(--accent); }
+  .dot-fair { background: #ffd700; }
+  .dot-poor { background: var(--accent2); }
+
+  @media (max-width: 900px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .header-stats { display: none; }
+    .form-row { grid-template-columns: 1fr; }
+    .list-main { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+    .detail-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div>
+      <div class="logo-text">✈ FLIGHTLOG</div>
+      <div class="logo-sub">Planespotting Journal</div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">
+      <div class="stat-num" id="total-count">0</div>
+      <div class="stat-label">Sightings</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-num" id="type-count">0</div>
+      <div class="stat-label">Types</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-num" id="airline-count">0</div>
+      <div class="stat-label">Airlines</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-num" id="airport-count">0</div>
+      <div class="stat-label">Airports</div>
+    </div>
+  </div>
+  <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleCSVImport(event)">
+  <button class="add-btn" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);margin-right:0.25rem" onclick="document.getElementById('csv-file-input').click()">↑ IMPORT CSV</button>
+  <button class="add-btn" style="background:var(--surface2);color:var(--accent);border:1px solid var(--accent);margin-right:0.5rem" onclick="downloadCSV()">↓ EXPORT CSV</button>
+  <button class="add-btn" onclick="openAddModal()">+ LOG SIGHTING</button>
+</header>
+
+<div class="app-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div>
+      <div class="sidebar-section-title">Search</div>
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="search-input" type="text" id="search-input" placeholder="Reg, airline, type..." oninput="applyFilters()">
+      </div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">Filters</div>
+      <div class="filter-group">
+        <div class="filter-label">Airline</div>
+        <select class="filter-select" id="filter-airline" onchange="applyFilters()">
+          <option value="">All Airlines</option>
+        </select>
+      </div>
+      <div class="filter-group" style="margin-top:0.75rem">
+        <div class="filter-label">Aircraft Type</div>
+        <select class="filter-select" id="filter-type" onchange="applyFilters()">
+          <option value="">All Types</option>
+        </select>
+      </div>
+      <div class="filter-group" style="margin-top:0.75rem">
+        <div class="filter-label">Airport</div>
+        <select class="filter-select" id="filter-airport" onchange="applyFilters()">
+          <option value="">All Airports</option>
+        </select>
+      </div>
+      <div class="filter-group" style="margin-top:0.75rem">
+        <div class="filter-label">Condition</div>
+        <select class="filter-select" id="filter-condition" onchange="applyFilters()">
+          <option value="">All Conditions</option>
+          <option value="excellent">Excellent</option>
+          <option value="good">Good</option>
+          <option value="fair">Fair</option>
+          <option value="poor">Poor</option>
+        </select>
+      </div>
+      <div class="filter-group" style="margin-top:0.75rem">
+        <div class="filter-label">Has Photo</div>
+        <select class="filter-select" id="filter-photo" onchange="applyFilters()">
+          <option value="">All</option>
+          <option value="yes">With Flickr Photo</option>
+          <option value="no">No Photo</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">View</div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="grid-btn" onclick="setView('grid')" title="Grid view">⊞</button>
+        <button class="view-btn" id="list-btn" onclick="setView('list')" title="List view">☰</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">Sort By</div>
+      <select class="filter-select" id="sort-select" onchange="applyFilters()">
+        <option value="date-desc">Newest First</option>
+        <option value="date-asc">Oldest First</option>
+        <option value="reg">Registration</option>
+        <option value="airline">Airline</option>
+        <option value="type">Aircraft Type</option>
+      </select>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">Quick Tags</div>
+      <div class="tag-filters" id="tag-filters"></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="toolbar">
+      <div class="results-count">Showing <span id="showing-count">0</span> of <span id="total-shown">0</span> sightings</div>
+      <button class="btn-cancel" onclick="resetFilters()">✕ Clear Filters</button>
+    </div>
+    <div id="sightings-container" class="sightings-grid"></div>
+  </main>
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="add-modal-title">LOG NEW SIGHTING</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Registration <span>*</span></label>
+          <input class="form-input" type="text" id="f-reg" placeholder="e.g. G-BOAC" style="text-transform:uppercase">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Aircraft Type <span>*</span></label>
+          <input class="form-input" type="text" id="f-type" placeholder="e.g. Boeing 747-400">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label class="form-label">Airline / Operator <span>*</span></label>
+          <input class="form-input" type="text" id="f-airline" placeholder="e.g. British Airways">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Airport <span>*</span></label>
+          <input class="form-input" type="text" id="f-airport" placeholder="e.g. London Heathrow">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ICAO Airport Code</label>
+          <input class="form-input" type="text" id="f-airport-icao" placeholder="e.g. EGLL" style="text-transform:uppercase">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date Spotted <span>*</span></label>
+          <input class="form-input" type="date" id="f-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Condition / Light</label>
+          <select class="form-select" id="f-condition">
+            <option value="excellent">☀ Excellent</option>
+            <option value="good" selected>🌤 Good</option>
+            <option value="fair">⛅ Fair</option>
+            <option value="poor">🌧 Poor / Overcast</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Livery / Special Scheme</label>
+          <input class="form-input" type="text" id="f-livery" placeholder="e.g. Union Jack retro">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tags (comma separated)</label>
+          <input class="form-input" type="text" id="f-tags" placeholder="e.g. retro, widebody, rare">
+        </div>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Flickr Photo URL</label>
+        <input class="form-input" type="url" id="f-flickr" placeholder="https://flickr.com/photos/..." oninput="previewFlickr()">
+        <div class="form-hint">Paste a direct Flickr photo page URL or direct image URL (.jpg/.png)</div>
+        <div class="flickr-preview" id="flickr-preview">
+          <span>🖼</span>
+          <span>Photo preview will appear here</span>
+        </div>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Flickr Direct Image URL (for thumbnail)</label>
+        <input class="form-input" type="url" id="f-flickr-img" placeholder="https://live.staticflickr.com/..." oninput="previewFlickrImg()">
+        <div class="form-hint">Paste the direct .jpg image URL from Flickr (right-click → Copy Image Address)</div>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Notes / Observations</label>
+        <textarea class="form-textarea" id="f-notes" placeholder="Describe the sighting, position, activity, anything notable..."></textarea>
+      </div>
+      <input type="hidden" id="f-editing-id">
+      <div class="form-actions">
+        <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+        <button class="btn-submit" id="f-submit-btn" onclick="saveSighting()">LOG SIGHTING →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="detail-title">SIGHTING DETAIL</div>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">IMPORT CSV</div>
+      <button class="modal-close" onclick="closeImportModal()">✕</button>
+    </div>
+    <div class="modal-body" id="import-body">
+      <div id="import-preview"></div>
+      <div style="display:flex;gap:0.75rem;align-items:center;padding:0.25rem 0;border-top:1px solid var(--border);padding-top:1rem">
+        <div style="flex:1;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim)" id="import-mode-label"></div>
+        <div style="display:flex;gap:0.5rem">
+          <label style="display:flex;align-items:center;gap:0.4rem;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-dim);cursor:pointer">
+            <input type="radio" name="import-mode" id="import-merge" value="merge" checked onchange="updateImportMode()"> Merge (skip duplicates)
+          </label>
+          <label style="display:flex;align-items:center;gap:0.4rem;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--accent2);cursor:pointer">
+            <input type="radio" name="import-mode" id="import-replace" value="replace" onchange="updateImportMode()"> Replace all
+          </label>
+        </div>
+      </div>
+      <div class="form-actions" style="padding-top:0;border-top:none">
+        <button class="btn-cancel" onclick="closeImportModal()">Cancel</button>
+        <button class="btn-submit" id="import-confirm-btn" onclick="confirmImport()">IMPORT →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✓ Sighting logged</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'flightlog_sightings_v2';
+
+const SAMPLE_DATA = [
+  {
+    id: 's1', reg: 'G-BOAC', type: 'Concorde', airline: 'British Airways', icao: 'BAW',
+    airport: 'London Heathrow', airportIcao: 'EGLL', date: '2003-10-24', time: '16:05',
+    flight: 'BA001', condition: 'excellent', livery: 'Union Jack retro',
+    tags: ['supersonic','retired','iconic','BA'],
+    flickrUrl: 'https://www.flickr.com/photos/airwolfhound/5850248543/',
+    flickrImg: 'https://live.staticflickr.com/5112/5850248543_d0a49b32a5_b.jpg',
+    notes: 'Final commercial flight of Concorde. Incredible sight as she touched down for the last time at LHR. Crowds were enormous.'
+  },
+  {
+    id: 's2', reg: 'N747BA', type: 'Boeing 747-8I', airline: 'Air Force One', icao: 'AFO',
+    airport: 'Washington Dulles', airportIcao: 'KIAD', date: '2024-01-15', time: '09:30',
+    flight: 'SAM001', condition: 'good', livery: 'Classic USAF Blue',
+    tags: ['military','USAF','747','government'],
+    flickrUrl: '',
+    flickrImg: '',
+    notes: 'A rare spot at Dulles. The iconic blue and white livery is unmistakable against a clear January sky.'
+  },
+  {
+    id: 's3', reg: 'A6-EVC', type: 'Airbus A380-800', airline: 'Emirates', icao: 'UAE',
+    airport: 'Dubai International', airportIcao: 'OMDB', date: '2024-03-10', time: '14:20',
+    flight: 'EK123', condition: 'excellent', livery: 'Standard Emirates',
+    tags: ['A380','widebody','superjumbo','UAE'],
+    flickrUrl: '',
+    flickrImg: '',
+    notes: 'Spectacular approach over the desert. Four massive GE90-like engines, double-deck beast.'
+  },
+  {
+    id: 's4', reg: 'JA741J', type: 'Boeing 777-300ER', airline: 'Japan Airlines', icao: 'JAL',
+    airport: 'Tokyo Haneda', airportIcao: 'RJTT', date: '2024-05-22', time: '11:45',
+    flight: 'JL001', condition: 'fair', livery: 'Crane livery',
+    tags: ['777','triple7','Japan','JAL'],
+    flickrUrl: '',
+    flickrImg: '',
+    notes: 'Beautiful Tsuru crane livery on the tail. Smooth rotation off 34R at Haneda during golden hour.'
+  },
+  {
+    id: 's5', reg: 'D-AIMA', type: 'Airbus A380-800', airline: 'Lufthansa', icao: 'DLH',
+    airport: 'Frankfurt', airportIcao: 'EDDF', date: '2024-07-08', time: '08:15',
+    flight: 'LH400', condition: 'poor', livery: 'Standard Lufthansa',
+    tags: ['A380','Lufthansa','Germany','widebody'],
+    flickrUrl: '',
+    flickrImg: '',
+    notes: 'Overcast morning at FRA but still managed to get a good spot from the observation deck.'
+  },
+  {
+    id: 's6', reg: 'VH-OQA', type: 'Airbus A380-800', airline: 'Qantas', icao: 'QFA',
+    airport: 'Sydney Kingsford Smith', airportIcao: 'YSSY', date: '2024-08-30', time: '10:00',
+    flight: 'QF1', condition: 'excellent', livery: 'Flying Kangaroo',
+    tags: ['A380','Qantas','Australia','iconic'],
+    flickrUrl: '',
+    flickrImg: '',
+    notes: 'Stunning morning at SYD. The kangaroo tail catching morning light is always a treat. Departing for DXB.'
+  }
+];
+
+let sightings = [];
+let filteredSightings = [];
+let currentView = 'grid';
+let activeTag = null;
+
+function loadData() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      sightings = JSON.parse(stored);
+    } else {
+      sightings = SAMPLE_DATA.map(s => ({...s}));
+      saveData();
+    }
+  } catch(e) {
+    sightings = SAMPLE_DATA.map(s => ({...s}));
+  }
+}
+
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sightings)); } catch(e) {}
+}
+
+// ─── FILTERS ─────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  const airline = document.getElementById('filter-airline').value;
+  const type = document.getElementById('filter-type').value;
+  const airport = document.getElementById('filter-airport').value;
+  const condition = document.getElementById('filter-condition').value;
+  const photo = document.getElementById('filter-photo').value;
+  const sort = document.getElementById('sort-select').value;
+
+  filteredSightings = sightings.filter(s => {
+    if (q && !`${s.reg} ${s.type} ${s.airline} ${s.airport} ${s.flight} ${s.notes} ${(s.tags||[]).join(' ')}`.toLowerCase().includes(q)) return false;
+    if (airline && s.airline !== airline) return false;
+    if (type && s.type !== type) return false;
+    if (airport && s.airport !== airport) return false;
+    if (condition && s.condition !== condition) return false;
+    if (photo === 'yes' && !s.flickrUrl && !s.flickrImg) return false;
+    if (photo === 'no' && (s.flickrUrl || s.flickrImg)) return false;
+    if (activeTag && !(s.tags||[]).map(t=>t.toLowerCase()).includes(activeTag)) return false;
+    return true;
+  });
+
+  // Sort
+  filteredSightings.sort((a, b) => {
+    switch(sort) {
+      case 'date-asc': return a.date.localeCompare(b.date);
+      case 'date-desc': return b.date.localeCompare(a.date);
+      case 'reg': return a.reg.localeCompare(b.reg);
+      case 'airline': return a.airline.localeCompare(b.airline);
+      case 'type': return a.type.localeCompare(b.type);
+      default: return b.date.localeCompare(a.date);
+    }
+  });
+
+  renderSightings();
+  updateCounts();
+}
+
+function resetFilters() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('filter-airline').value = '';
+  document.getElementById('filter-type').value = '';
+  document.getElementById('filter-airport').value = '';
+  document.getElementById('filter-condition').value = '';
+  document.getElementById('filter-photo').value = '';
+  document.getElementById('sort-select').value = 'date-desc';
+  activeTag = null;
+  document.querySelectorAll('.tag-chip').forEach(c => c.classList.remove('active'));
+  applyFilters();
+}
+
+function populateFilterOptions() {
+  const airlines = [...new Set(sightings.map(s => s.airline))].sort();
+  const types = [...new Set(sightings.map(s => s.type))].sort();
+  const airports = [...new Set(sightings.map(s => s.airport))].sort();
+
+  const setOpts = (id, vals) => {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = sel.options[0].outerHTML + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    if (vals.includes(cur)) sel.value = cur;
+  };
+
+  setOpts('filter-airline', airlines);
+  setOpts('filter-type', types);
+  setOpts('filter-airport', airports);
+
+  // Tags
+  const allTags = [...new Set(sightings.flatMap(s => s.tags||[]))].sort();
+  const tf = document.getElementById('tag-filters');
+  tf.innerHTML = allTags.map(t =>
+    `<button class="tag-chip${activeTag===t.toLowerCase()?' active':''}" onclick="toggleTag('${t.toLowerCase()}')">${t}</button>`
+  ).join('');
+}
+
+function toggleTag(tag) {
+  activeTag = activeTag === tag ? null : tag;
+  document.querySelectorAll('.tag-chip').forEach(c => {
+    c.classList.toggle('active', c.textContent.toLowerCase() === activeTag);
+  });
+  applyFilters();
+}
+
+function updateCounts() {
+  document.getElementById('total-count').textContent = sightings.length;
+  document.getElementById('type-count').textContent = new Set(sightings.map(s=>s.type)).size;
+  document.getElementById('airline-count').textContent = new Set(sightings.map(s=>s.airline)).size;
+  document.getElementById('airport-count').textContent = new Set(sightings.map(s=>s.airport)).size;
+  document.getElementById('showing-count').textContent = filteredSightings.length;
+  document.getElementById('total-shown').textContent = sightings.length;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.getElementById('grid-btn').classList.toggle('active', v === 'grid');
+  document.getElementById('list-btn').classList.toggle('active', v === 'list');
+  const c = document.getElementById('sightings-container');
+  c.className = v === 'grid' ? 'sightings-grid' : 'sightings-list';
+  renderSightings();
+}
+
+function conditionDot(c) {
+  const map = {excellent:'dot-excellent',good:'dot-good',fair:'dot-fair',poor:'dot-poor'};
+  return `<span class="condition-dot ${map[c]||'dot-good'}"></span>`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderSightings() {
+  const c = document.getElementById('sightings-container');
+
+  if (filteredSightings.length === 0) {
+    c.innerHTML = `<div class="empty-state"><div class="empty-icon">✈</div><div class="empty-title">No sightings found</div><div class="empty-sub">Try adjusting your filters or log a new sighting</div></div>`;
+    return;
+  }
+
+  if (currentView === 'grid') {
+    c.innerHTML = filteredSightings.map(s => renderGridCard(s)).join('');
+  } else {
+    c.innerHTML = filteredSightings.map(s => renderListCard(s)).join('');
+  }
+}
+
+function renderGridCard(s) {
+  const img = s.flickrImg
+    ? `<a class="card-photo-link" href="${esc(s.flickrUrl||s.flickrImg)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+        <img src="${esc(s.flickrImg)}" alt="${esc(s.reg)}" loading="lazy">
+        <div class="photo-overlay"><span class="flickr-badge">📷 FLICKR</span></div>
+       </a>`
+    : `<div class="card-photo-placeholder">✈</div>`;
+
+  const tags = (s.tags||[]).slice(0,2).map(t => `<span class="mini-tag">${esc(t)}</span>`).join('');
+
+  return `<div class="sighting-card" onclick="openDetail('${s.id}')">
+    ${img}
+    <div class="card-body">
+      <div class="card-reg">${esc(s.reg)}</div>
+      <div class="card-type">${esc(s.type)} · ${esc(s.airline)}</div>
+      <div class="card-meta">
+        <div class="meta-item"><div class="meta-key">Airport</div><div class="meta-val">${esc(s.airport)}</div></div>
+        <div class="meta-item"><div class="meta-key">Condition</div><div class="meta-val">${conditionDot(s.condition)}${s.condition||'—'}</div></div>
+        <div class="meta-item" style="grid-column:1/-1"><div class="meta-key">Livery</div><div class="meta-val">${esc(s.livery)||'Standard'}</div></div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="card-date">${formatDate(s.date)}</div>
+      <div class="card-tags">${tags}</div>
+    </div>
+  </div>`;
+}
+
+function renderListCard(s) {
+  const thumb = s.flickrImg
+    ? `<img class="list-card-thumb" src="${esc(s.flickrImg)}" alt="${esc(s.reg)}" loading="lazy">`
+    : `<div class="list-card-thumb-placeholder">✈</div>`;
+
+  return `<div class="list-card" onclick="openDetail('${s.id}')">
+    ${thumb}
+    <div class="list-main">
+      <div class="list-reg">${esc(s.reg)}</div>
+      <div class="list-details">
+        <div class="list-type">${esc(s.type)}</div>
+        <div class="list-airline">${esc(s.airline)}</div>
+      </div>
+      <div class="list-meta">
+        <div>AIRPORT <span>${esc(s.airportIcao||s.airport)}</span></div>
+        <div>DATE <span>${formatDate(s.date)}</span></div>
+        <div>COND <span>${conditionDot(s.condition)}${s.condition||'—'}</span></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem">
+      ${(s.tags||[]).slice(0,3).map(t=>`<span class="mini-tag">${esc(t)}</span>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ─── DETAIL MODAL ─────────────────────────────────────────────────────────────
+function openDetail(id) {
+  const s = sightings.find(x => x.id === id);
+  if (!s) return;
+
+  document.getElementById('detail-title').textContent = s.reg + ' — ' + s.type;
+
+  const photo = s.flickrImg
+    ? `<a href="${esc(s.flickrUrl||s.flickrImg)}" target="_blank"><img class="detail-photo" src="${esc(s.flickrImg)}" alt="${esc(s.reg)}"></a>`
+    : `<div class="detail-photo-placeholder"><span>✈</span><span style="font-size:0.75rem;font-family:'DM Mono';color:var(--text-dim)">No photo linked</span></div>`;
+
+  const body = `
+    ${photo}
+    <div class="detail-header">
+      <div>
+        <div class="detail-reg">${esc(s.reg)}</div>
+        <div class="detail-type">${esc(s.type)}</div>
+      </div>
+      <div class="detail-date-badge">${formatDate(s.date)}</div>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-cell"><div class="detail-cell-key">Airline</div><div class="detail-cell-val">${esc(s.airline)}</div></div>
+      <div class="detail-cell"><div class="detail-cell-key">Airport</div><div class="detail-cell-val">${esc(s.airport)}</div></div>
+      <div class="detail-cell"><div class="detail-cell-key">ICAO Code</div><div class="detail-cell-val">${esc(s.airportIcao)||'—'}</div></div>
+      <div class="detail-cell"><div class="detail-cell-key">Condition</div><div class="detail-cell-val">${conditionDot(s.condition)}${s.condition||'—'}</div></div>
+      <div class="detail-cell"><div class="detail-cell-key">Livery</div><div class="detail-cell-val">${esc(s.livery)||'Standard'}</div></div>
+      <div class="detail-cell"><div class="detail-cell-key">Tags</div><div class="detail-cell-val" style="display:flex;gap:0.4rem;flex-wrap:wrap">${(s.tags||[]).map(t=>`<span class="mini-tag">${esc(t)}</span>`).join('')||'—'}</div></div>
+    </div>
+    ${s.notes ? `<div class="detail-notes">"${esc(s.notes)}"</div>` : ''}
+    <div class="detail-actions">
+      <button class="btn-delete" onclick="deleteSighting('${s.id}')">✕ Delete</button>
+      <button class="btn-cancel" style="border-color:var(--accent);color:var(--accent)" onclick="openEditModal('${s.id}')">✎ Edit</button>
+      ${s.flickrUrl ? `<a class="btn-flickr" href="${esc(s.flickrUrl)}" target="_blank">📷 View on Flickr</a>` : ''}
+    </div>
+  `;
+
+  document.getElementById('detail-body').innerHTML = body;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal').classList.remove('open');
+}
+
+function deleteSighting(id) {
+  if (!confirm('Delete this sighting?')) return;
+  sightings = sightings.filter(s => s.id !== id);
+  saveData();
+  closeDetailModal();
+  populateFilterOptions();
+  applyFilters();
+  showToast('Sighting deleted');
+}
+
+// ─── ADD MODAL ────────────────────────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-editing-id').value = '';
+  document.getElementById('add-modal-title').textContent = 'LOG NEW SIGHTING';
+  document.getElementById('f-submit-btn').textContent = 'LOG SIGHTING →';
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const s = sightings.find(x => x.id === id);
+  if (!s) return;
+  closeDetailModal();
+  document.getElementById('f-editing-id').value = id;
+  document.getElementById('add-modal-title').textContent = 'EDIT SIGHTING — ' + s.reg;
+  document.getElementById('f-submit-btn').textContent = 'SAVE CHANGES →';
+  document.getElementById('f-reg').value = s.reg;
+  document.getElementById('f-type').value = s.type;
+  document.getElementById('f-airline').value = s.airline;
+  document.getElementById('f-airport').value = s.airport;
+  document.getElementById('f-airport-icao').value = s.airportIcao || '';
+  document.getElementById('f-date').value = s.date;
+  document.getElementById('f-condition').value = s.condition || 'good';
+  document.getElementById('f-livery').value = s.livery || '';
+  document.getElementById('f-tags').value = (s.tags || []).join(', ');
+  document.getElementById('f-flickr').value = s.flickrUrl || '';
+  document.getElementById('f-flickr-img').value = s.flickrImg || '';
+  document.getElementById('f-notes').value = s.notes || '';
+  // Show photo preview if available
+  if (s.flickrImg) {
+    document.getElementById('flickr-preview').innerHTML =
+      `<img src="${esc(s.flickrImg)}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML='<span>🖼</span><span>Photo preview will appear here</span>'">`;
+  } else {
+    document.getElementById('flickr-preview').innerHTML = '<span>🖼</span><span>Photo preview will appear here</span>';
+  }
+  document.getElementById('add-modal').classList.add('open');
+}
+
+
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+  clearForm();
+}
+
+function clearForm() {
+  ['f-reg','f-type','f-airline','f-airport','f-airport-icao','f-date','f-livery','f-tags','f-flickr','f-flickr-img','f-notes','f-editing-id'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-condition').value = 'good';
+  document.getElementById('flickr-preview').innerHTML = '<span>🖼</span><span>Photo preview will appear here</span>';
+  document.getElementById('add-modal-title').textContent = 'LOG NEW SIGHTING';
+  document.getElementById('f-submit-btn').textContent = 'LOG SIGHTING →';
+}
+
+function previewFlickrImg() {
+  const url = document.getElementById('f-flickr-img').value.trim();
+  const prev = document.getElementById('flickr-preview');
+  if (url && (url.includes('staticflickr') || url.match(/\.(jpg|jpeg|png|webp)/i))) {
+    prev.innerHTML = `<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML='<span>⚠</span><span>Could not load image</span>'">`;
+  }
+}
+
+function previewFlickr() {
+  const url = document.getElementById('f-flickr').value.trim();
+  if (url.match(/\.(jpg|jpeg|png|webp)/i)) {
+    document.getElementById('f-flickr-img').value = url;
+    previewFlickrImg();
+  }
+}
+
+function saveSighting() {
+  const reg = document.getElementById('f-reg').value.trim().toUpperCase();
+  const type = document.getElementById('f-type').value.trim();
+  const airline = document.getElementById('f-airline').value.trim();
+  const airport = document.getElementById('f-airport').value.trim();
+  const date = document.getElementById('f-date').value;
+
+  if (!reg || !type || !airline || !airport || !date) {
+    showToast('⚠ Please fill required fields', true);
+    return;
+  }
+
+  const tags = document.getElementById('f-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const editingId = document.getElementById('f-editing-id').value;
+
+  const updated = {
+    id: editingId || ('s' + Date.now()),
+    reg, type, airline, airport,
+    airportIcao: document.getElementById('f-airport-icao').value.trim().toUpperCase(),
+    date,
+    condition: document.getElementById('f-condition').value,
+    livery: document.getElementById('f-livery').value.trim(),
+    tags,
+    flickrUrl: document.getElementById('f-flickr').value.trim(),
+    flickrImg: document.getElementById('f-flickr-img').value.trim(),
+    notes: document.getElementById('f-notes').value.trim()
+  };
+
+  if (editingId) {
+    const idx = sightings.findIndex(s => s.id === editingId);
+    if (idx !== -1) sightings[idx] = updated;
+    saveData();
+    closeAddModal();
+    populateFilterOptions();
+    applyFilters();
+    showToast('✓ Sighting updated: ' + reg);
+  } else {
+    sightings.unshift(updated);
+    saveData();
+    closeAddModal();
+    populateFilterOptions();
+    applyFilters();
+    showToast('✓ Sighting logged: ' + reg);
+  }
+}
+
+// ─── CSV EXPORT ───────────────────────────────────────────────────────────────
+function downloadCSV() {
+  const cols = ['Registration','Aircraft Type','Airline','Airport','Airport ICAO','Date','Condition','Livery','Tags','Flickr URL','Flickr Image URL','Notes'];
+  const csvVal = v => {
+    const str = String(v == null ? '' : v);
+    return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str.replace(/"/g,'""')}"` : str;
+  };
+  const rows = [cols.join(',')];
+  const data = filteredSightings.length < sightings.length ? filteredSightings : sightings;
+  data.forEach(s => {
+    rows.push([
+      s.reg, s.type, s.airline, s.airport, s.airportIcao||'',
+      s.date, s.condition, s.livery||'', (s.tags||[]).join('; '),
+      s.flickrUrl||'', s.flickrImg||'', s.notes||''
+    ].map(csvVal).join(','));
+  });
+  const blob = new Blob([rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `flightlog_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`↓ Exported ${data.length} sightings`);
+}
+
+// ─── CSV IMPORT ───────────────────────────────────────────────────────────────
+let pendingImport = [];
+
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const results = [];
+
+  function parseLine(line) {
+    const fields = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuote) {
+        if (ch === '"' && line[i+1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') { inQuote = false; }
+        else { cur += ch; }
+      } else {
+        if (ch === '"') { inQuote = true; }
+        else if (ch === ',') { fields.push(cur); cur = ''; }
+        else { cur += ch; }
+      }
+    }
+    fields.push(cur);
+    return fields;
+  }
+
+  if (lines.length < 2) return [];
+  const headers = parseLine(lines[0]).map(h => h.trim().toLowerCase());
+
+  // Flexible column mapping
+  const col = name => {
+    const aliases = {
+      reg: ['registration','reg','registration number','tail','tail number'],
+      type: ['aircraft type','type','aircraft','plane type','model'],
+      airline: ['airline','operator','airline / operator','carrier'],
+      airport: ['airport','airport name','location','spotted at'],
+      airportIcao: ['airport icao','icao','airport code','airport icao code'],
+      date: ['date','date spotted','spotted date','date seen'],
+      condition: ['condition','conditions','light','lighting','condition / light'],
+      livery: ['livery','livery / special scheme','special scheme','paint'],
+      tags: ['tags','tag'],
+      flickrUrl: ['flickr url','flickr','flickr photo url','flickr link'],
+      flickrImg: ['flickr image url','flickr img','flickr image','image url','photo url'],
+      notes: ['notes','note','observations','comments','description']
+    };
+    for (const [key, names] of Object.entries(aliases)) {
+      if (key === name && names.some(n => headers.includes(n))) {
+        return headers.indexOf(names.find(n => headers.includes(n)));
+      }
+    }
+    return -1;
+  };
+
+  const get = (fields, name) => {
+    const i = col(name);
+    return i >= 0 && i < fields.length ? fields[i].trim() : '';
+  };
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const fields = parseLine(line);
+    const reg = get(fields, 'reg').toUpperCase();
+    const type = get(fields, 'type');
+    const airline = get(fields, 'airline');
+    const airport = get(fields, 'airport');
+    const date = get(fields, 'date');
+    if (!reg || !type || !airline || !airport) continue; // skip malformed rows
+    const tagsRaw = get(fields, 'tags');
+    const tags = tagsRaw ? tagsRaw.split(/[;,]/).map(t=>t.trim()).filter(Boolean) : [];
+    results.push({
+      id: 's' + Date.now() + '_' + i,
+      reg, type, airline, airport,
+      airportIcao: get(fields, 'airportIcao').toUpperCase(),
+      date, condition: get(fields, 'condition') || 'good',
+      livery: get(fields, 'livery'), tags,
+      flickrUrl: get(fields, 'flickrUrl'),
+      flickrImg: get(fields, 'flickrImg'),
+      notes: get(fields, 'notes')
+    });
+  }
+  return results;
+}
+
+function handleCSVImport(event) {
+  const file = event.target.files[0];
+  event.target.value = ''; // reset so same file can be re-selected
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    showToast('⚠ Please select a .csv file', true); return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const parsed = parseCSV(e.target.result);
+    if (parsed.length === 0) {
+      showToast('⚠ No valid rows found in CSV', true); return;
+    }
+    pendingImport = parsed;
+    showImportPreview(parsed);
+  };
+  reader.onerror = () => showToast('⚠ Could not read file', true);
+  reader.readAsText(file);
+}
+
+function showImportPreview(rows) {
+  const existingRegs = new Set(sightings.map(s => s.reg));
+  const dupes = rows.filter(r => existingRegs.has(r.reg)).length;
+  const newCount = rows.length - dupes;
+
+  const sample = rows.slice(0, 5);
+  const tableRows = sample.map(r =>
+    `<tr>
+      <td style="padding:0.4rem 0.6rem;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--text-bright)">${esc(r.reg)}</td>
+      <td style="padding:0.4rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--accent)">${esc(r.type)}</td>
+      <td style="padding:0.4rem 0.6rem;font-size:0.78rem">${esc(r.airline)}</td>
+      <td style="padding:0.4rem 0.6rem;font-size:0.78rem;color:var(--text-dim)">${esc(r.airport)}</td>
+      <td style="padding:0.4rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-dim)">${esc(r.date)}</td>
+    </tr>`
+  ).join('');
+
+  document.getElementById('import-preview').innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);padding:1rem;margin-bottom:1rem">
+      <div style="display:flex;gap:2rem;margin-bottom:0.75rem">
+        <div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--accent);line-height:1">${rows.length}</div><div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-dim);letter-spacing:0.15em">ROWS FOUND</div></div>
+        <div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--accent3);line-height:1">${newCount}</div><div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-dim);letter-spacing:0.15em">NEW</div></div>
+        <div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--accent2);line-height:1">${dupes}</div><div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-dim);letter-spacing:0.15em">DUPLICATES</div></div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-dim);margin-bottom:0.5rem;letter-spacing:0.1em">PREVIEW (first ${Math.min(5,rows.length)} rows)</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;border:1px solid var(--border)">
+          <thead><tr style="background:var(--bg)">
+            <th style="padding:0.3rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--text-dim);text-align:left;letter-spacing:0.12em">REG</th>
+            <th style="padding:0.3rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--text-dim);text-align:left;letter-spacing:0.12em">TYPE</th>
+            <th style="padding:0.3rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--text-dim);text-align:left;letter-spacing:0.12em">AIRLINE</th>
+            <th style="padding:0.3rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--text-dim);text-align:left;letter-spacing:0.12em">AIRPORT</th>
+            <th style="padding:0.3rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--text-dim);text-align:left;letter-spacing:0.12em">DATE</th>
+          </tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+      ${rows.length > 5 ? `<div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-dim);margin-top:0.5rem">… and ${rows.length-5} more</div>` : ''}
+    </div>`;
+
+  updateImportMode();
+  document.getElementById('import-modal').classList.add('open');
+}
+
+function updateImportMode() {
+  const mode = document.querySelector('input[name="import-mode"]:checked').value;
+  const existingRegs = new Set(sightings.map(s => s.reg));
+  const dupes = pendingImport.filter(r => existingRegs.has(r.reg)).length;
+  const label = document.getElementById('import-mode-label');
+  if (mode === 'merge') {
+    label.textContent = `Will add ${pendingImport.length - dupes} new sighting(s), skip ${dupes} duplicate(s).`;
+    label.style.color = 'var(--text-dim)';
+  } else {
+    label.textContent = `⚠ Will REPLACE all ${sightings.length} existing sighting(s).`;
+    label.style.color = 'var(--accent2)';
+  }
+}
+
+function confirmImport() {
+  const mode = document.querySelector('input[name="import-mode"]:checked').value;
+  let added = 0;
+  if (mode === 'replace') {
+    sightings = pendingImport;
+    added = pendingImport.length;
+  } else {
+    const existingRegs = new Set(sightings.map(s => s.reg));
+    const toAdd = pendingImport.filter(r => !existingRegs.has(r.reg));
+    sightings = [...toAdd, ...sightings];
+    added = toAdd.length;
+  }
+  saveData();
+  closeImportModal();
+  populateFilterOptions();
+  applyFilters();
+  showToast(`↑ Imported ${added} sighting(s)`);
+  pendingImport = [];
+}
+
+function closeImportModal() {
+  document.getElementById('import-modal').classList.remove('open');
+  pendingImport = [];
+}
+
+
+function formatDate(d) {
+  if (!d) return '—';
+  try {
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
+  } catch(e) { return d; }
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = isError ? 'var(--accent2)' : 'var(--accent)';
+  t.style.color = isError ? 'var(--accent2)' : 'var(--accent)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Close modals on overlay click
+document.getElementById('import-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeImportModal();
+});
+document.getElementById('add-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeAddModal();
+});
+document.getElementById('detail-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeDetailModal();
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeAddModal();
+    closeDetailModal();
+    closeImportModal();
+  }
+  if (e.key === 'n' && !e.target.closest('input,textarea,select')) openAddModal();
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadData();
+populateFilterOptions();
+applyFilters();
+</script>
+</body>
+</html>
